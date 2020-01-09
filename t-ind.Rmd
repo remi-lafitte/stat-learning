@@ -1,0 +1,130 @@
+---
+title: "td1-t-ind"
+author: "Rémi_Lafitte"
+date: "09/01/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(here)
+library(infer)
+library(patchwork)
+library(magrittr)
+library(tidyverse)
+```
+
+## import
+
+```{r}
+d<-read.csv(here::here("td1.csv"), sep = ";")
+d$genre_c <- as.numeric(d$genre_c)
+```
+
+## moyennes par genre
+
+```{r}
+tapply(d$tr,d$genre,"mean")
+```
+## ecart type corrigé
+
+```{r}
+tapply(d$tr,d$genre,"sd")
+```
+
+## ecart type non corrigé
+
+```{r}
+d_variance<-d %>% 
+  mutate(
+    mean_tr = mean(tr),
+    diff_absolue = tr - mean_tr,
+    diff_carre = diff_absolue^2
+  ) 
+
+d_variance_f <- d_variance %>% 
+  dplyr::filter(genre == "femme") 
+
+d_variance_h <- d_variance %>% 
+  dplyr::filter(genre == "homme")
+
+sqrt(sum(d_variance_f$diff_carre) / 12)
+
+sqrt(sum(d_variance_h$diff_carre) / 12)
+```
+
+## calcul du t-test à échantillon indépendant
+
+### à la main : 
+```{r}
+
+as_vector(d$tr)
+
+mean_f<-d %>%  group_by(genre) %>% summarise(mean=mean(tr)) 
+mean_f<-as_vector(mean_f$mean) %>% .[1]
+
+mean_h<-d %>%  group_by(genre) %>% summarise(mean=mean(tr)) 
+mean_h<- as_vector(mean_h$mean) %>% .[2]
+
+sd_f <- d %>%  group_by(genre) %>% summarise(sd=sd(tr)) 
+sd_f2<-as_vector(sd_f$sd) %>% .[1] %>% .^2
+
+sd_h <- d %>%  group_by(genre) %>% summarise(sd=sd(tr)) 
+sd_h2<-as_vector(sd_h$sd) %>% .[2] %>% .^2 
+
+d_n <- d %>% group_by(genre) %>% summarise(n = length(genre)) 
+ddl <- d_n$n[1] + d_n$n[2] - 2
+
+diff_mean = mean_f - mean_h 
+
+diff_mean / sqrt((sd_f2 + sd_h2)/ddl)
+
+```
+Ici on obtient un t(22) = +/- 0.97. Ca varie avec les arrondis cela dit. 
+
+### avec R
+```{r}
+lm(tr ~ genre_c, d)
+summary(lm(tr ~ genre_c, d))
+```
+
+Conclusion ici : avec seulement la valeur du t en main, on ne peut rien conclure ! 
+
+
+### avec le package "infer" 
+
+```{r}
+generated_samples <- d %>% 
+  specify(formula = tr ~ genre) %>% 
+  hypothesize(null = "independence") %>% 
+  generate(reps = 5000)
+
+null_distribution_t <- generated_samples %>% 
+  calculate(stat = "t", order = c("femme", "homme")) 
+
+null_distribution_t %>% visualize(method = "theoretical")# permet d'avoir courbe aussi
+
+obs_t <- d %>% 
+  specify(formula = tr ~ genre) %>% 
+  calculate(stat = "t", order = c("femme", "homme"))
+null_distribution_t %>% 
+  visualize(method = "both", obs_stat = obs_t, direction = "greater") 
+# bon code = permet de voir les distr en vrai 
+
+visualize(obs_t, method = "theoretical") +
+  shade_p_value(obs_stat = obs_t, direction = "two_sided")
+
+#now ci : 
+percentile_ci_two_means <- d %>% 
+  specify(formula = tr ~ genre) %>% 
+  generate(reps = 5000) %>% 
+  calculate(stat = "diff in means", order = c("femme", "homme")) %>% 
+  get_ci()
+
+
+```
+
+
+![Caption](infer.png)
+
