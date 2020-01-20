@@ -15,116 +15,289 @@ library(magrittr)
 library(tidyverse)
 ```
 
-## import
+## Import des données
 
 ```{r}
 d<-read.csv(here::here("td1.csv"), sep = ";")
 d$genre_c <- as.numeric(d$genre_c)
 ```
 
-## moyennes par genre
+## Moyennes par genre
 
 ```{r}
 tapply(d$tr,d$genre,"mean")
 ```
-## ecart type corrigé
+## Ecart type corrigé par genre
 
 ```{r}
 tapply(d$tr,d$genre,"sd")
 ```
 
-## ecart type non corrigé
+## Calcul à la main des ecart types non corrigé par genre
 
 ```{r}
-d_variance<-d %>% 
+d_cue<-d %>%
+  group_by(genre) %>% 
   mutate(
     mean_tr = mean(tr),
-    diff_absolue = tr - mean_tr,
-    diff_carre = diff_absolue^2
-  ) 
+    diff_carre = (tr - mean_tr)^2
+  ) %>% 
+  summarize(sum = sum(diff_carre), mean = mean(mean_tr)) %>% 
+  mutate(n = 11, n_non_corrige = 12) %>% 
+  mutate(sd = sqrt((sum / n)), sd_non_corrige = sqrt((sum / n_non_corrige)))
 
-d_variance_f <- d_variance %>% 
-  dplyr::filter(genre == "femme") 
-
-d_variance_h <- d_variance %>% 
-  dplyr::filter(genre == "homme")
-
-sqrt(sum(d_variance_f$diff_carre) / 12)
-
-sqrt(sum(d_variance_h$diff_carre) / 12)
-```
-
-## calcul du t-test à échantillon indépendant
-
-### à la main : 
-```{r}
-
-as_vector(d$tr)
-
-mean_f<-d %>%  group_by(genre) %>% summarise(mean=mean(tr)) 
-mean_f<-as_vector(mean_f$mean) %>% .[1]
-
-mean_h<-d %>%  group_by(genre) %>% summarise(mean=mean(tr)) 
-mean_h<- as_vector(mean_h$mean) %>% .[2]
-
-sd_f <- d %>%  group_by(genre) %>% summarise(sd=sd(tr)) 
-sd_f2<-as_vector(sd_f$sd) %>% .[1] %>% .^2
-
-sd_h <- d %>%  group_by(genre) %>% summarise(sd=sd(tr)) 
-sd_h2<-as_vector(sd_h$sd) %>% .[2] %>% .^2 
-
-d_n <- d %>% group_by(genre) %>% summarise(n = length(genre)) 
-ddl <- d_n$n[1] + d_n$n[2] - 2
-
-diff_mean = mean_f - mean_h 
-
-diff_mean / sqrt((sd_f2 + sd_h2)/ddl)
+d_cue %>%  dplyr::select(genre, sd_non_corrige)
 
 ```
-Ici on obtient un t(22) = +/- 0.97. Ca varie avec les arrondis cela dit. 
 
-### avec R
-```{r}
-lm(tr ~ genre_c, d)
-summary(lm(tr ~ genre_c, d))
+## Représentation graphique des données 
+
+```{r fig.align='center'}
+p1<-ggplot(d_cue, aes(x = genre, y = mean, col = genre)) +
+    geom_errorbar(aes(ymin = d_cue$mean - d_cue$sd, ymax = d_cue$mean + d_cue$sd), width = 0.2, size = 2, 
+                  col ="red", alpha = 0.4)+
+  geom_jitter(data = d, aes(genre, y = tr, col = genre), size = 3, alpha = 0.4, width = 0.05)+
+  geom_point(size = 5)+
+  scale_y_continuous(limits=c(300, 700))+
+  labs(title = "SD = 80 ms")
+
+p1
+
+
 ```
 
-Conclusion ici : avec seulement la valeur du t en main, on ne peut rien conclure ! 
+
+Que se passe t-il si la variabilité intra-groupe/inter-individuelle diminue ? En passant de à peu près +/-80 à +/-20 ms ?
+
+```{r fig.align='center'}
+
+rnorm2 <- function(n,mean,sd) { mean+sd*scale(rnorm(n)) }
 
 
-### avec le package "infer" 
+f<-rnorm2(n = 12, mean = 532, sd = 20) 
+h<-rnorm2(n = 12, mean = 508, sd = 20) 
+
+new_tr<-combine(f,h)
+
+
+d2<-d %>%
+  cbind(., new_tr) 
+
+d_cue2<-
+  d2 %>% 
+  group_by(genre) %>% 
+  mutate(
+    mean_tr = mean(new_tr),
+    diff_carre = (new_tr - mean_tr)^2
+  ) %>% 
+  summarize(sum = sum(diff_carre), mean = mean(mean_tr)) %>% 
+  mutate(n = 12) %>% 
+  mutate(sd = sqrt((sum / n)), sd = sqrt((sum / n)))
+
+
+p2<-ggplot(d_cue2, aes(x = genre, y = mean, col = genre)) +
+    geom_errorbar(aes(ymin = d_cue2$mean - d_cue2$sd, ymax = d_cue2$mean + d_cue2$sd), width = 0.2, size = 2, 
+                  col ="red", alpha = 0.4)+
+  geom_jitter(data = d2, aes(genre, y = new_tr, col = genre), size = 3, alpha = 0.4, width = 0.05)+
+  geom_point(size = 5)+
+  scale_y_continuous(limits=c(300, 700))+
+  labs(title = "SD = 20 ms")
+
+p2
+
+```
+
+Comparons les deux jeux de données :
+
+```{r fig.align='center'}
+p1+p2
+```
+
+**Comme nous allons le voir, l'écart type va avoir une répercussion considérable sur notre façon de comparer les moyennes des hommes et des femmes d'un point de vue statistique.**  
+
+## calcul du t-test à échantillons indépendants "à la main"
+
+**Calculons séparément les valeurs "*$t$ observé*" ($q$) pour chaque jeu de donnée :** 
+
+
+- jeu de donnée de base (grand écart type : grande variabilité intra-groupe)
+
+```{r, error = F, warning = F, message = F}
+
+se <- sqrt(
+  (d_cue$sd[1]^2/d_cue$n[1]) + (d_cue$sd[2]^2/d_cue$n[2]))
+df <- d_cue$n[1] + d_cue$n[2] - 2
+t <- (d_cue$mean[1]-d_cue$mean[2]-0)/se 
+t
+
+
+```
+
+- jeu de donnée simulé (petit écart type : petite variabilité intra-groupe)
 
 ```{r}
+se2 <- sqrt(
+  ((d_cue2$sd[1]^2)/d_cue2$n[1]) + (d_cue2$sd[2]^2/d_cue2$n[2])
+  )
+df2 <- d_cue2$n[1] + d_cue2$n[2] - 2
+t2 <- (d_cue2$mean[1]-d_cue2$mean[2]-0)/se2 
+t2
+```
+
+**La valeur du *$t$ observé* est bien plus élevée quand l'écart type diminue. Ca signifie que plus le *hasard* (que l'on appelle aussi *variabilité inter-individuelle*, *bruit*, *erreur*, *variabilité intra-groupe*, *facteur aléatoire*...) diminue, plus la différence de moyenne entre les hommes et les femmes a de chance d'être due à la fois au hasard *et* à la variable genre.** 
+
+**En d'autres termes, plus le hasard est "petit", plus le ratio $$\frac{genre + hasard}{hasard}$$ est grand**.
+
+
+**Très important : on peut connaître la probabilité associée au t observé sous la distribution de probabilité de H0, mais pas sous H1. La distribution de probablité de H0 est en effet connue, puisqu'elle décrit quelle "forme" prend le hasard. En revanche, on ne connaît absolument pas la distribution de $H1$ (sa moyenne exacte, sa variance exacte ...).**
+
+```{r warning = F, fig.align='center', message = F, fig.width=10}
+
 generated_samples <- d %>% 
-  specify(formula = tr ~ genre) %>% 
-  hypothesize(null = "independence") %>% 
-  generate(reps = 5000)
+specify(formula = tr ~ genre) %>% 
+hypothesize(null = "independence") %>% 
+generate(reps = 2000)
+
 
 null_distribution_t <- generated_samples %>% 
   calculate(stat = "t", order = c("femme", "homme")) 
 
-null_distribution_t %>% visualize(method = "theoretical")# permet d'avoir courbe aussi
-
-obs_t <- d %>% 
-  specify(formula = tr ~ genre) %>% 
-  calculate(stat = "t", order = c("femme", "homme"))
 null_distribution_t %>% 
-  visualize(method = "both", obs_stat = obs_t, direction = "greater") 
-# bon code = permet de voir les distr en vrai 
-
-visualize(obs_t, method = "theoretical") +
-  shade_p_value(obs_stat = obs_t, direction = "two_sided")
-
-#now ci : 
-percentile_ci_two_means <- d %>% 
-  specify(formula = tr ~ genre) %>% 
-  generate(reps = 5000) %>% 
-  calculate(stat = "diff in means", order = c("femme", "homme")) %>% 
-  get_ci()
+  visualize(method = "theoretical")  +
+  labs(title = "Distribution des probabilités de t observé sous H0")
 
 
 ```
 
+## Interpréter la probabilité $t$ sous $H0$  
 
-![Caption](infer.png)
+**Le graphique ci-dessus décrit la distribution des probabilités de $t$ observé sous $H0$. Elle décrit la densité de probabilité (axe Y) en fonction de différentes valeurs de $t$ observé (axe X). Plus on s'éloigne de $mu = 0$, plus la probabilité associée au $t$ (e.g. $t = 3.6$) est faible.** 
+
+**A noter que l'écart type de $H0$ (*erreur type*) est déterminé sur la base de l'écart type de l'échantillon. A partir de cette distribution $H0$ on va pouvoir situer à quel point notre $t$ observé se trouve loin de 0.** 
+
+
+```{r warning = F, fig.align = "center", fig.height=8, fig.width=12, message = F}
+generated_samples <- d %>% 
+specify(formula = tr ~ genre) %>% 
+hypothesize(null = "independence") %>% 
+generate(reps = 2000)
+
+
+null_distribution_t <- generated_samples %>% 
+  calculate(stat = "t", order = c("femme", "homme")) 
+
+obs_t <- d %>% 
+  specify(formula = tr ~ genre) %>% 
+  calculate(stat = "t", order = c("femme", "homme"))
+
+p3<-null_distribution_t %>% 
+  visualize(method = "both", obs_stat = obs_t, direction = "two_sided",
+             obs_stat_color = "red2",
+            pvalue_fill = "pink") +
+   shade_p_value(obs_stat = obs_t, direction = "two_sided")+
+  labs(title = "Distribution des probabilités de t observé sous H0 (grand écart-type)")
+
+generated_samples2 <- d2 %>% 
+  specify(formula = new_tr ~ genre) %>% 
+  hypothesize(null = "independence") %>% 
+  generate(reps = 2000)
+
+
+obs_t2 <- d2 %>% 
+  specify(formula = new_tr ~ genre) %>% 
+  calculate(stat = "t", order = c("femme", "homme"))
+
+null_distribution_t2 <- generated_samples2 %>% 
+  calculate(stat = "t", order = c("femme", "homme")) 
+
+p4<-null_distribution_t2 %>% 
+  visualize(method = "both", obs_stat = obs_t2, direction = "two_sided",
+             obs_stat_color = "red2",
+            pvalue_fill = "pink")  +
+   shade_p_value(obs_stat = obs_t2, direction = "two_sided")+
+  labs(title = "Distribution des probabilités de t observé sous H0 (petit écart-type)")
+
+
+p3+p4 
+
+
+
+```
+
+**Le graphique ci-dessus décrit la probabilité du $t$ observé (trait rouge) sous $H0$ en fonction de l'écart type de l'échantillon. Ci dessus, nous pouvons constater que la valeur du $t$ observé provenant du jeu de donnée avec un grand écart-type est associé à une plus grande probabilité d'apparition sous $H0$, comparé au $t$ observé provenant du jeu de donnée avec un petit écart-type.** 
+
+Sur le graphique de gauche, on peut constater visuellement que l'aire sous la courbe située à gauche ou à droite des valeurs $-t$ et $+t$ est bien plus volumineuse comparé au graphique de droite.
+
+**Ce que décrit plus précisément le graphique de gauche, c'est que la probabilité/vraisemblance d'avoir une différence de moyenne de 24 ms entre les hommes et les femmes est de `r round(1-pt(obs_t$stat, 22),4)` ($24%$) *si* $H0$ est vraie.**
+
+**Sur le graphique de droite, la probabilité/vraisemblance d'avoir une différence de moyenne de 24 ms entre les hommes et les femmes est de `r round(1-pt(obs_t2$stat, 22),4)` ($0.4%$) *si* $H0$ est vraie.**
+
+**La différence de 24 ms observée entre les deux genres est donc moins probable quand l'écart-type est petit que quand il est grand. Si le hasard est moins probable, alors la différence de moyenne observée est peut-être due au *hasard* *et* à la variable *genre* **. 
+
+Mais quel critère adopter pour décider si le *genre* joue un rôle "important" ou non dans la différence de moyenne homme/femme ? Autrement dit, quel critère adopter pour décider si $H0$ ("*la difference de moyenne homme/femme n'est due que au hasard*") est fausse et doit être rejetée ?
+
+**En psychologie, ce critère, nommé *seuil alpha* est traditionnellement fixé à 5%. Si la probabilité d'observé $t$ est inférieur à 5% sachant $H0$ vraie, alors on rejette $H0$. Rejeter $H0$ signifie donc conclure que le hasard *et* le genre explique la différence de moyenne homme/femme (hypothèse alternative $H1$).** 
+
+
+Le graphique ce-dessous montre si le $t$ observé a une probabilité d'apparition inférieure ou supérieure à 5% sous $H0$. Le trait bleu représente la valeur de $t$ *critique* pour laquelle la probabilité du $t$ observé sous $H0$ est égale à 5%. Cette valeur peut-être retrouvée dans les tables du $t$-test à l'aide du seuil alpha et des degrés de liberté du $t$-test ($n1 + n2 - 2$).
+
+```{r warning = F, fig.align = "center",  fig.height=8, fig.width=12, message =F}
+generated_samples <- d %>% 
+specify(formula = tr ~ genre) %>% 
+hypothesize(null = "independence") %>% 
+generate(reps = 2000)
+
+
+null_distribution_t <- generated_samples %>% 
+  calculate(stat = "t", order = c("femme", "homme")) 
+
+obs_t <- d %>% 
+  specify(formula = tr ~ genre) %>% 
+  calculate(stat = "t", order = c("femme", "homme"))
+
+p3<-null_distribution_t %>% 
+  visualize(method = "both", obs_stat = obs_t, direction = "two_sided",
+             obs_stat_color = "red2",
+            pvalue_fill = "pink") +
+   shade_p_value(obs_stat = obs_t, direction = "two_sided")+
+  geom_vline(xintercept = abs(qt(0.05, 22)), linetype = "solid", size = 2, col = "blue")+
+  labs(title = "Distribution des probabilités de t observé sous H0 (grand écart-type)")
+
+
+generated_samples2 <- d2 %>% 
+  specify(formula = new_tr ~ genre) %>% 
+  hypothesize(null = "independence") %>% 
+  generate(reps = 2000)
+
+
+obs_t2 <- d2 %>% 
+  specify(formula = new_tr ~ genre) %>% 
+  calculate(stat = "t", order = c("femme", "homme"))
+
+null_distribution_t2 <- generated_samples2 %>% 
+  calculate(stat = "t", order = c("femme", "homme")) 
+
+p4<-null_distribution_t2 %>% 
+  visualize(method = "both", obs_stat = obs_t2, direction = "two_sided",
+             obs_stat_color = "red2",
+            pvalue_fill = "pink")  +
+   shade_p_value(obs_stat = obs_t2, direction = "two_sided")+
+  geom_vline(xintercept = abs(qt(0.05, 22)), linetype = "solid", size = 2, col = "blue")+
+  labs(title = "Distribution des probabilités de t observé sous H0 (petit écart-type)")
+
+p3+p4
+
+```
+
+Comme on peut le voir visuellement, la probabilité du $t$ observé si $H0$ est vrai est très peu vraisemblable car inférieure à 5% ($p <.05$). On formule donc la conclusion suivante :*Le temps de réaction des hommes est plus court que celui des femmes dans la tâche de conduite, avec un effet statistiquement significatif du genre $t$(22) = `r round(obs_t2,2)`, $p$ < .05.*.  
+
+## Augmenter la taille de l'échantillon : quel effet sur $H0$ ?
+
+**Quand $n$ augmente, la variabilité inter-individuelle diminue (les réponses convergent de plus en plus vers une réponse "moyenne"), donc l'écart-type diminue, ce qui signifie que la valeur du $t$ observé tend naturellement vers 0.** 
+
+Mais ça ne veut pas dire que le $t$ observé a moins de chance d'être en dessous du $t$ critique, bien au contraire !
+
+Si le genre a bien un effet sur la différence de moyenne homme/femme, puisqu'en augmentant $n$ le le "hasard" diminue, l'effet du genre peut alors davantage expliquer la différence de moyenne homme/femme. 
+Comme dit précédemment : **...plus le hasard est "petit", plus le ratio $$\frac{genre + hasard}{hasard}$$ est grand**.
+
 

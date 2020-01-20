@@ -12,6 +12,7 @@ library(infer)
 library(patchwork)
 library(magrittr)
 library(tidyverse)
+library(gganimate)
 
 ```
 
@@ -20,10 +21,7 @@ library(tidyverse)
 - Création de 4 populations. les populations i sont identiques. les populations d sont différentes.
 
 ```{r}
-i1<- rnorm(n = 20, mean = 400, sd = 10) %>% as_tibble(.)
-i2 = i1
-d1<- rnorm(n = 20, mean = 450, sd = 13) %>% as_tibble(.)
-d2<- rnorm(n = 20, mean = 650, sd = 16) %>% as_tibble(.)
+i1<- rnorm(n = 1000, mean = 532, sd = 82) %>% as_tibble(.)
 
 ```
 
@@ -31,61 +29,18 @@ d2<- rnorm(n = 20, mean = 650, sd = 16) %>% as_tibble(.)
 
 ```{r}
 tirage_i1 <- i1 %>% 
-  rep_sample_n(size = 4, reps = 6) %>% 
+  rep_sample_n(size = 6, reps = 10) %>% 
   group_by(replicate) %>% 
   summarise(mean = mean(value)) %>% 
   ungroup()
 
-tirage_i2 <- i2 %>% 
-  rep_sample_n(size = 4, reps = 6) %>% 
-  group_by(replicate) %>% 
-  summarise(mean = mean(value)) %>% 
-  ungroup()
 
-p1<-ggplot(tirage_i1,aes(x = replicate, y = mean)) +
-  geom_point(size = 2) +
-  geom_hline(yintercept = mean(tirage_i1$mean), col = "red")+
-  scale_x_continuous(breaks=seq(1, 6, 1))
-  
+ggplot(tirage_i1,aes(x = replicate, y = mean)) +
+  geom_point(size = 4) +
+  geom_hline(yintercept = mean(tirage_i1$mean), col = "red", size = 2)+
+  scale_x_continuous(breaks=seq(1, 10, 1))+
+  scale_y_continuous(limits=c(300, 700))
+ 
 
-p2<-ggplot(tirage_i2,aes(x = replicate, y = mean)) +
-  geom_point(size = 2)+
-  geom_hline(yintercept = mean(tirage_i2$mean), col = "blue")+
-  scale_x_continuous(breaks=seq(1, 6, 1))
-
-
-p1+p2
-  
-  
-```
-
-
-```{r}
-tirage_d1 <- d1 %>% 
-  rep_sample_n(size = 4, reps = 6) %>% 
-  group_by(replicate) %>% 
-  summarise(mean = mean(value)) %>% 
-  ungroup()
-
-tirage_d2 <- d2 %>% 
-  rep_sample_n(size = 4, reps = 6) %>% 
-  group_by(replicate) %>% 
-  summarise(mean = mean(value)) %>% 
-  ungroup()
-
-p3<-ggplot(tirage_d1,aes(x = replicate, y = mean)) +
-  geom_point(size = 2) +
-  geom_hline(yintercept = mean(tirage_d1$mean), col = "red")+
-  scale_x_continuous(breaks=seq(1, 6, 1))
-  
-
-p4<-ggplot(tirage_d2,aes(x = replicate, y = mean)) +
-  geom_point(size = 2)+
-  geom_hline(yintercept = mean(tirage_d2$mean), col = "blue")+
-  scale_x_continuous(breaks=seq(1, 6, 1))
-
-
-p3+p4
-  
   
 ```
