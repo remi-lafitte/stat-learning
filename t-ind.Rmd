@@ -173,7 +173,7 @@ null_distribution_t %>%
 
 **Le graphique ci-dessus décrit la distribution des probabilités de $t$ observé sous $H0$. Elle décrit la densité de probabilité (axe Y) en fonction de différentes valeurs de $t$ observé (axe X). Plus on s'éloigne de $mu = 0$, plus la probabilité associée au $t$ (e.g. $t = 3.6$) est faible.** 
 
-**A noter que l'écart type de $H0$ (*erreur type*) est déterminé sur la base de l'écart type de l'échantillon. A partir de cette distribution $H0$ on va pouvoir situer à quel point notre $t$ observé se trouve loin de 0.** 
+**A noter que l'"écart type" de $H0$ (*erreur type*) est déterminé sur la base du nombre de degré de liberté de l'échantillon $n$.** 
 
 
 ```{r warning = F, fig.align = "center", fig.height=8, fig.width=12, message = F}
@@ -299,5 +299,26 @@ Mais ça ne veut pas dire que le $t$ observé a moins de chance d'être en desso
 
 Si le genre a bien un effet sur la différence de moyenne homme/femme, puisqu'en augmentant $n$ le le "hasard" diminue, l'effet du genre peut alors davantage expliquer la différence de moyenne homme/femme. 
 Comme dit précédemment : **...plus le hasard est "petit", plus le ratio $$\frac{genre + hasard}{hasard}$$ est grand**.
+
+
+
+#### Bonus 
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
