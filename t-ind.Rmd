@@ -104,6 +104,41 @@ print(p)
 
 ```
 
+```{r}
+h<-as_tibble(rnorm(mean = 521, sd = 5, n = 200))
+f<-as_tibble(rnorm(mean = 519, sd = 5, n = 200))
+m<-cbind(h,f)
+colnames(m)<-c("Allemagne", "Espagne")
+pop<-m %>% gather(pays, tr)
+data<-pop
+p<-ggplot(data, aes(x = pays, y =tr, col = pays, fill = pays))+
+    geom_jitter(size = 3, alpha = 0.7, width = 0.05)+
+  stat_summary(aes(group = 1),fun = "mean", geom = "line", col = "black")+
+  stat_summary(fun = mean,
+               geom = "errorbar",
+               fun.max = function(x) mean(x) + sd(x),
+               fun.min = function(x) mean(x) - sd(x),
+               width = 0.1, col = "black", size=1)+
+  stat_summary(fun = "mean", geom = "point", stroke = 1.2, shape = 21, col = "black",
+               size=4)+
+  scale_y_continuous(limits = c(400,650))+
+  stat_summary(aes(label=..y..), fun = function(x) round(mean(x),1), geom="text", size=8, col = "black",vjust =-4)+
+  labs(title = paste0("n =", nrow(data), "| ET [H = ", round(sd(h$value),1),
+                      "; F = ",
+                     round(sd(f$value),1),"]"), y = "Temps de réaction")+
+  guides(col = F, fill =F)+
+  theme_bw(base_size = 14)
+png(filename = "sondage.png")
+p
+dev.off()
+write.table(file = "sondage.txt",capture.output(t.test(h,f)), quote = F,
+            row.names = F)
+t.test(h,f)
+x<-c(1,3)
+sd(x)
+```
+
+
 Comparons les deux jeux de données :
 
 ```{r fig.align='center'}
