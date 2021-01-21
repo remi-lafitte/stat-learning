@@ -19,7 +19,6 @@ library(tidyverse)
 
 ```{r}
 d<-read.csv(here::here("td1.csv"), sep = ";")
-d$genre_c <- as.numeric(d$genre_c)
 ```
 
 ## Moyennes par genre
@@ -53,15 +52,21 @@ d_cue %>%  dplyr::select(genre, sd_non_corrige)
 ## Représentation graphique des données 
 
 ```{r fig.align='center'}
-p1<-ggplot(d_cue, aes(x = genre, y = mean, col = genre)) +
-    geom_errorbar(aes(ymin = d_cue$mean - d_cue$sd, ymax = d_cue$mean + d_cue$sd), width = 0.2, size = 2, 
-                  col ="red", alpha = 0.4)+
-  geom_jitter(data = d, aes(genre, y = tr, col = genre), size = 3, alpha = 0.4, width = 0.05)+
-  geom_point(size = 5)+
+data<-d
+ggplot(data, aes(x = genre, y =tr, col = genre, fill = genre))+
+    geom_jitter(size = 3, alpha = 0.6, width = 0.05)+
+  stat_summary(aes(group = 1),fun = "mean", geom = "line", col = "black")+
+  stat_summary(fun = mean,
+               geom = "errorbar",
+               fun.max = function(x) mean(x) + sd(x),
+               fun.min = function(x) mean(x) - sd(x),
+               width = 0.05, col = "black", size=1)+
+  stat_summary(fun = "mean", geom = "point", stroke = 1.2, shape = 21, col = "black",
+               size=4)+
   scale_y_continuous(limits=c(300, 700))+
-  labs(title = "SD = 80 ms")
+  labs(title = paste("n =", nrow(data)), y = "Temps de réaction")+
+  guides(col = F, fill =F)
 
-p1
 
 
 ```
@@ -70,40 +75,32 @@ p1
 Que se passe t-il si la variabilité intra-groupe/inter-individuelle diminue ? En passant de à peu près +/-80 à +/-20 ms ?
 
 ```{r fig.align='center'}
-
-rnorm2 <- function(n,mean,sd) { mean+sd*scale(rnorm(n)) }
-
-
-f<-rnorm2(n = 12, mean = 532, sd = 20) 
-h<-rnorm2(n = 12, mean = 508, sd = 20) 
-
-new_tr<-combine(f,h)
-
-
-d2<-d %>%
-  cbind(., new_tr) 
-
-d_cue2<-
-  d2 %>% 
-  group_by(genre) %>% 
-  mutate(
-    mean_tr = mean(new_tr),
-    diff_carre = (new_tr - mean_tr)^2
-  ) %>% 
-  summarize(sum = sum(diff_carre), mean = mean(mean_tr)) %>% 
-  mutate(n = 12) %>% 
-  mutate(sd = sqrt((sum / n)), sd = sqrt((sum / n)))
-
-
-p2<-ggplot(d_cue2, aes(x = genre, y = mean, col = genre)) +
-    geom_errorbar(aes(ymin = d_cue2$mean - d_cue2$sd, ymax = d_cue2$mean + d_cue2$sd), width = 0.2, size = 2, 
-                  col ="red", alpha = 0.4)+
-  geom_jitter(data = d2, aes(genre, y = new_tr, col = genre), size = 3, alpha = 0.4, width = 0.05)+
-  geom_point(size = 5)+
-  scale_y_continuous(limits=c(300, 700))+
-  labs(title = "SD = 20 ms")
-
-p2
+exo1<-function(x1, x2, n1,n2){
+h<-as_tibble(rnorm(mean = x1, sd = 20, n = n1))
+f<-as_tibble(rnorm(mean = x2, sd = 20, n = n2))
+m<-cbind(h,f)
+colnames(m)<-c("homme", "femme")
+pop<-m %>% gather(genre, tr)
+data<-pop
+p<-ggplot(data, aes(x = genre, y =tr, col = genre, fill = genre))+
+    geom_jitter(size = 3, alpha = 0.7, width = 0.05)+
+  stat_summary(aes(group = 1),fun = "mean", geom = "line", col = "black")+
+  stat_summary(fun = mean,
+               geom = "errorbar",
+               fun.max = function(x) mean(x) + sd(x),
+               fun.min = function(x) mean(x) - sd(x),
+               width = 0.05, col = "black", size=1)+
+  stat_summary(fun = "mean", geom = "point", stroke = 1.2, shape = 21, col = "black",
+               size=4)+
+  scale_y_continuous(limits = c(400,650))+
+  stat_summary(aes(label=..y..), fun = function(x) round(mean(x),1), geom="text", size=8, col = "black",vjust =-4)+
+  labs(title = paste0("n =", nrow(data), "| ET [H = ", round(sd(h$value),1),
+                      "; F = ",
+                     round(sd(f$value),1),"]"), y = "Temps de réaction")+
+  guides(col = F, fill =F)+
+  theme_bw(base_size = 14)
+print(p)
+}
 
 ```
 
