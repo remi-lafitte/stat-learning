@@ -3,11 +3,11 @@ x
 	Welch Two Sample t-test
 
 data:  a and e
-t = -9.3053, df = 397.14, p-value < 2.2e-16
+t = -10.462, df = 390.69, p-value < 2.2e-16
 alternative hypothesis: true difference in means is not equal to 0
 95 percent confidence interval:
- -2.237578 -1.457012
+ -2.433709 -1.663738
 sample estimates:
 mean of x mean of y 
- 20.01553  21.86282 
+ 20.04633  22.09505 
 
