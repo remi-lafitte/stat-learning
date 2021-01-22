@@ -267,7 +267,7 @@ p5<-
                      round(sd(e$value),1),"]"), y = "Temps de nage")+
   guides(col = F, fill =F)+
   theme_bw(base_size = 14)
-t.test(a,e)
+t.test(a,e, var.equal = T)
 ```
 
 ```{r}
