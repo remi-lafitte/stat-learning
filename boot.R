@@ -1,6 +1,6 @@
-x <- c(8.1, 8.4, 8.8, 8.7, 9, 9.1, 9.2, 9.3, 9.4, 9.6, 9.9, 10, 10, 10.5, 10.6, 10.6, 11.2, 11.8, 12.6)
-y <- c(21, 19, 18, 16, 15, 17, 17, 17, 19, 14, 14, 15, 11, 12, 12, 13, 10, 8, 9)
-
+d<-read.csv(here::here("td1.csv"), sep = ";")
+x<-d[d$genre == "homme","tr"]
+y<-d[d$genre == "femme","tr"]
 df <- tbl_df(data.frame(x,y))
 model<-t.test(df$x ,df$y)
 model$statistic
@@ -10,10 +10,16 @@ t_res <- function(df) {
   model <- t.test(formula = vd ~ vi, data =df2 %>% sample_frac(replace=T))
   return (round(model$statistic,1))
 }
-df_boot <- replicate(10000, t_res(df))
+df_boot <- replicate(1000, t_res(df))
 df_boot <- tbl_df(data.frame(t(df_boot)))
 tb<-df_boot %>% gather("boot", "t")
 
+# Create the function.
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+getmode(tb$t)
 library(gganimate)
 
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
@@ -29,7 +35,8 @@ df_ani <- df %>%
 
 p_anim <- ggplot(data = df_ani, aes(x = t)) +
   geom_histogram(fill = "grey", col ="black")+
-  scale_x_continuous(breaks=(seq(-12,12,1)))
+  scale_x_continuous(breaks=(seq(-15,15,1)))+
+  labs(title = "n = 24", x = "T distribution")
 
 anim <- p_anim + transition_manual(frame) +
   ease_aes("linear") +
