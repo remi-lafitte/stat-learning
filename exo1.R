@@ -36,31 +36,31 @@ exo1<-function(x1, x2, n1,n2){
 }
 
 #plot
-# H0
-png(filename = "exo1_h0.png", width = 40, height = 30, units = "cm", res = 100)
-exo1(520, 520, n1 = 5000, n2 = 5000)+
-exo1(520, 520,n1 = 1000, n2 = 1000)+
-exo1(520, 520,n1 = 100, n2 = 100)+
-exo1(520, 520,n1 = 50, n2 = 50)+
-exo1(520, 520,n1 = 12, n2 = 12)+
-exo1(520, 520,n1 = 5, n2 = 5)+
-  plot_annotation(title = expression("Univers H0" ~","~ mu ~ "=520" ~","~ sigma ~ "=20"))
-dev.off()
+# # H0
+# png(filename = "exo1_h0.png", width = 40, height = 30, units = "cm", res = 100)
+# exo1(520, 520, n1 = 5000, n2 = 5000)+
+# exo1(520, 520,n1 = 1000, n2 = 1000)+
+# exo1(520, 520,n1 = 100, n2 = 100)+
+# exo1(520, 520,n1 = 50, n2 = 50)+
+# exo1(520, 520,n1 = 12, n2 = 12)+
+# exo1(520, 520,n1 = 5, n2 = 5)+
+#   plot_annotation(title = expression("Univers H0" ~","~ mu ~ "=520" ~","~ sigma ~ "=20"))
+# dev.off()
 
-# H1
-png(filename = "exo1_h1.png", width = 40, height = 30, units = "cm", res = 100)
-exo1(525, 515, n1 = 5000, n2 = 5000)+
-  exo1(525, 515,n1 = 1000, n2 = 1000)+
-  exo1(525, 515,n1 = 100, n2 = 100)+
-  exo1(525, 515,n1 = 50, n2 = 50)+
-  exo1(525, 515,n1 = 12, n2 = 12)+
-  exo1(525, 515,n1 = 5, n2 = 5)+
-  plot_annotation(title = expression(
-    "Univers H1" ~","~ mu[Homme] ~ "=515" ~","~ mu[Femme] ~ "=525" ~","~ sigma ~ "=20"))
-dev.off()
+# H1------------------------
+# png(filename = "exo1_h1.png", width = 40, height = 30, units = "cm", res = 100)
+# exo1(525, 515, n1 = 5000, n2 = 5000)+
+#   exo1(525, 515,n1 = 1000, n2 = 1000)+
+#   exo1(525, 515,n1 = 100, n2 = 100)+
+#   exo1(525, 515,n1 = 50, n2 = 50)+
+#   exo1(525, 515,n1 = 12, n2 = 12)+
+#   exo1(525, 515,n1 = 5, n2 = 5)+
+#   plot_annotation(title = expression(
+#     "Univers H1" ~","~ mu[Homme] ~ "=515" ~","~ mu[Femme] ~ "=525" ~","~ sigma ~ "=20"))
+# dev.off()
 
 
-# H1
+# H1-----------------
 png(filename = "exo1_h1_se.png", width = 40, height = 30, units = "cm", res = 100)
 exo1(525, 515, n1 = 5000, n2 = 5000)+
   exo1(525, 515,n1 = 1000, n2 = 1000)+
@@ -70,4 +70,19 @@ exo1(525, 515, n1 = 5000, n2 = 5000)+
   exo1(525, 515,n1 = 5, n2 = 5)+
   plot_annotation(title = expression(
     "Univers H1" ~","~ mu[Homme] ~ "=515" ~","~ mu[Femme] ~ "=525" ~","~ sigma ~ "=20"))
+dev.off()
+
+
+# H0-----------------
+png(filename = "exo1_h0_sd.png", width = 40, height = 30, units = "cm", res = 100)
+fm<-520
+hm<-520
+  exo1(fm, hm, n1 = 5000, n2 = 5000)+
+  exo1(fm, hm,n1 = 1000, n2 = 1000)+
+  exo1(fm, hm,n1 = 100, n2 = 100)+
+  exo1(fm, hm,n1 = 50, n2 = 50)+
+  exo1(fm, hm,n1 = 12, n2 = 12)+
+  exo1(fm, hm,n1 = 5, n2 = 5)+
+  plot_annotation(title = expression(
+    "Univers H0" ~","~ mu[Homme] ~ "=520" ~","~ mu[Femme] ~ "=520" ~","~ sigma ~ "=20"))
 dev.off()
