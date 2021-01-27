@@ -1,4 +1,8 @@
 # Boot dice-------------
+library(gganimate)
+library(ggplot2)
+library(tidyverse)
+
 throws <- data.frame(dice=sample(1:6, 1000, replace=TRUE, prob=c(1,1,1,1,1,1)/6))
 throws$sample<-seq(1:nrow(throws))
 df_ani <- throws  %>% 
@@ -19,5 +23,5 @@ anim <- p_anim + transition_manual(frame) +
   ease_aes("linear") +
   enter_fade() 
 # +exit_fade()
-anim
+# anim
 anim_save("dice.gif", anim)
